@@ -1,0 +1,3 @@
+[submodule "tests/pft"]
+	path = tests/pft
+	url = https://github.com/gavinfielder/pft
