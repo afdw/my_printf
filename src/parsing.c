@@ -26,8 +26,12 @@ static size_t parse_argument_index(const char *format, size_t *i, size_t *curren
         *i = j + 1;
         return (size_t) parsed - 1;
     } else {
-        (*current_sequential_argument_index)++;
-        return *current_sequential_argument_index - 1;
+        if (current_sequential_argument_index == NULL) {
+            return 0;
+        } else {
+            (*current_sequential_argument_index)++;
+            return *current_sequential_argument_index - 1;
+        }
     }
 }
 
@@ -55,11 +59,12 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
             .length_modifier = LENGTH_MODIFIER_none,
             .conversion_specifier = CONVERSION_SPECIFIER_literal,
             .data_argument_index = (size_t) -1,
-            .data = NULL,
+            .data_void_pointer = NULL,
         };
         if (format[i] == '%') {
             i++;
-            conversion_specification.data_argument_index = parse_argument_index(format, &i, &current_sequential_argument_index);
+            size_t data_argument_index_start = i;
+            parse_argument_index(format, &i, NULL);
             for (; format[i] == '#' || format[i] == '0' || format[i] == '-' || format[i] == ' ' || format[i] == '+'; i++) {
                 if (format[i] == '#') {
                     conversion_specification.conversion_specification_flags.hash = true;
@@ -83,7 +88,11 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
             if (format[i] == '.') {
                 i++;
                 parse_literal_or_field_supplied(format, &i, &current_sequential_argument_index, &conversion_specification.precision_argument_index, &conversion_specification.precision);
+                if (conversion_specification.precision < 0) {
+                    conversion_specification.precision = -1;
+                }
             }
+            conversion_specification.data_argument_index = parse_argument_index(format, &data_argument_index_start, &current_sequential_argument_index);
             if (format[i] == 'h' && format[i + 1] == 'h') {
                 conversion_specification.length_modifier = LENGTH_MODIFIER_hh;
                 i += 2;
@@ -102,6 +111,18 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
             }
             if (format[i] == 'L') {
                 conversion_specification.length_modifier = LENGTH_MODIFIER_L;
+                i++;
+            }
+            if (format[i] == 'j') {
+                conversion_specification.length_modifier = LENGTH_MODIFIER_j;
+                i++;
+            }
+            if (format[i] == 'z') {
+                conversion_specification.length_modifier = LENGTH_MODIFIER_z;
+                i++;
+            }
+            if (format[i] == 't') {
+                conversion_specification.length_modifier = LENGTH_MODIFIER_t;
                 i++;
             }
 #define MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER(x) if (format[i] == #x[0]) { \
@@ -126,11 +147,12 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
             MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER(p)
 #undef MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER
             if (format[i] == '%') {
-                \
-                conversion_specification.data = (const void *) &format[i];
+                conversion_specification.conversion_specifier = CONVERSION_SPECIFIER_literal;
+                conversion_specification.data_char = '%';
             }
         } else {
-            conversion_specification.data = (const void *) &format[i];
+            conversion_specification.conversion_specifier = CONVERSION_SPECIFIER_literal;
+            conversion_specification.data_char = format[i];
         }
         if (used_conversion_specifications < parsed_format.length) {
             parsed_format.conversion_specifications[used_conversion_specifications] = conversion_specification;

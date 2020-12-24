@@ -20,6 +20,9 @@ enum length_modifier {
     LENGTH_MODIFIER_l,
     LENGTH_MODIFIER_ll,
     LENGTH_MODIFIER_L,
+    LENGTH_MODIFIER_j,
+    LENGTH_MODIFIER_z,
+    LENGTH_MODIFIER_t,
 };
 
 enum conversion_specifier {
@@ -52,7 +55,14 @@ struct conversion_specification {
     enum length_modifier length_modifier;
     enum conversion_specifier conversion_specifier;
     size_t data_argument_index;
-    const void *data;
+    union {
+        char data_char;
+        intmax_t data_intmax_t;
+        uintmax_t data_uintmax_t;
+        uintmax_t data_long_double;
+        void *data_void_pointer;
+        void *data_char_pointer;
+    };
 };
 
 struct parsed_format {
