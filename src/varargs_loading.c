@@ -183,7 +183,7 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
             if (parsed_format.conversion_specifications[i].precision < 0) {
                 parsed_format.conversion_specifications[i].precision = -1;
             }
-            parsed_format.conversion_specifications[i].field_width_argument_index = (size_t) -1;
+            parsed_format.conversion_specifications[i].precision_argument_index = (size_t) -1;
         }
         enum length_modifier length_modifier = parsed_format.conversion_specifications[i].length_modifier;
         if (parsed_format.conversion_specifications[i].conversion_specifier == CONVERSION_SPECIFIER_literal) {
