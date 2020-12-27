@@ -3,7 +3,7 @@ project(my_printf C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_library(my_printf src/library.c src/library.h src/parsing.c src/parsing.h src/varargs_loading.c src/varargs_loading.h src/ap.c src/ap.h)
+add_library(my_printf src/library.c src/library.h src/parsing.c src/parsing.h src/varargs_loading.c src/varargs_loading.h src/ap.c src/ap.h src/output_stream.c src/output_stream.h src/printing.c src/printing.h)
 
 add_custom_command(OUTPUT libftprintf.o
         COMMAND ld -o libftprintf.o -r --whole-archive libmy_printf.a --defsym=ft_printf=my_printf
