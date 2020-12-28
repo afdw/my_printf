@@ -52,6 +52,8 @@ struct ap ap_multiply(struct ap x, struct ap y);
 
 struct ap_division_result ap_divide(struct ap numerator, struct ap denominator);
 
+struct ap ap_power(struct ap base, struct ap exponent);
+
 int8_t ap_sign(struct ap ap);
 
 int8_t ap_compare(struct ap x, struct ap y);

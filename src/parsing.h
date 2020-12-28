@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "ap.h"
 
 struct conversion_specification_flags {
     bool hash;
@@ -23,6 +24,7 @@ enum length_modifier {
     LENGTH_MODIFIER_j,
     LENGTH_MODIFIER_z,
     LENGTH_MODIFIER_t,
+    LENGTH_MODIFIER_Z,
 };
 
 enum conversion_specifier {
@@ -60,6 +62,7 @@ struct conversion_specification {
         intmax_t data_intmax_t;
         uintmax_t data_uintmax_t;
         uintmax_t data_long_double;
+        struct ap data_ap;
         void *data_void_pointer;
         void *data_char_pointer;
     };

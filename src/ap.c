@@ -276,6 +276,21 @@ struct ap_division_result ap_divide(struct ap numerator, struct ap denominator) 
     return ap_division_result;
 }
 
+struct ap ap_power(struct ap base, struct ap exponent) {
+    if (ap_sign(ap_copy(exponent)) < 0) {
+        ap_destroy(base);
+        ap_destroy(exponent);
+        return ap_from_intmax_t(0);
+    }
+    struct ap result = ap_from_intmax_t(1);
+    for (; ap_sign(ap_copy(exponent)) > 0; exponent = ap_subtract(exponent, ap_from_intmax_t(1))) {
+        result = ap_multiply(result, ap_copy(base));
+    }
+    ap_destroy(base);
+    ap_destroy(exponent);
+    return result;
+}
+
 int8_t ap_sign(struct ap ap) {
     if (ap.length == 0) {
         ap_destroy(ap);

@@ -16,6 +16,7 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
         ARGUMENT_TYPE_UINTMAX_T,
         ARGUMENT_TYPE_SIZE_T,
         ARGUMENT_TYPE_PTRDIFF_T,
+        ARGUMENT_TYPE_AP,
         ARGUMENT_TYPE_VOID_POINTER,
         ARGUMENT_TYPE_CHAR_POINTER,
     };
@@ -32,6 +33,7 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
         uintmax_t argument_uintmax_t;
         size_t argument_size_t;
         ptrdiff_t argument_ptrdiff_t;
+        struct ap argument_ap;
         void *argument_void_pointer;
         char *argument_char_pointer;
     };
@@ -73,6 +75,8 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
                     data_argument_type = ARGUMENT_TYPE_SIZE_T;
                 } else if (length_modifier == LENGTH_MODIFIER_t) {
                     data_argument_type = ARGUMENT_TYPE_PTRDIFF_T;
+                } else if (length_modifier == LENGTH_MODIFIER_Z) {
+                    data_argument_type = ARGUMENT_TYPE_AP;
                 } else {
                     data_argument_type = ARGUMENT_TYPE_INT;
                 }
@@ -91,6 +95,8 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
                     data_argument_type = ARGUMENT_TYPE_SIZE_T;
                 } else if (length_modifier == LENGTH_MODIFIER_t) {
                     data_argument_type = ARGUMENT_TYPE_PTRDIFF_T;
+                } else if (length_modifier == LENGTH_MODIFIER_Z) {
+                    data_argument_type = ARGUMENT_TYPE_AP;
                 } else {
                     data_argument_type = ARGUMENT_TYPE_UNSIGNED_INT;
                 }
@@ -160,6 +166,9 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
             case ARGUMENT_TYPE_PTRDIFF_T:
                 arguments[i].argument_ptrdiff_t = va_arg(va_list, ptrdiff_t);
                 break;
+            case ARGUMENT_TYPE_AP:
+                arguments[i].argument_ap = va_arg(va_list, struct ap);
+                break;
             case ARGUMENT_TYPE_VOID_POINTER:
                 arguments[i].argument_void_pointer = va_arg(va_list, void *);
                 break;
@@ -209,6 +218,8 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
                     parsed_format.conversion_specifications[i].data_intmax_t = argument.argument_size_t;
                 } else if (length_modifier == LENGTH_MODIFIER_t) {
                     parsed_format.conversion_specifications[i].data_intmax_t = argument.argument_ptrdiff_t;
+                } else if (length_modifier == LENGTH_MODIFIER_Z) {
+                    parsed_format.conversion_specifications[i].data_ap = argument.argument_ap;
                 } else {
                     parsed_format.conversion_specifications[i].data_intmax_t = argument.argument_int;
                 }
@@ -231,6 +242,8 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
                     parsed_format.conversion_specifications[i].data_uintmax_t = argument.argument_size_t;
                 } else if (length_modifier == LENGTH_MODIFIER_t) {
                     parsed_format.conversion_specifications[i].data_uintmax_t = argument.argument_ptrdiff_t;
+                } else if (length_modifier == LENGTH_MODIFIER_Z) {
+                    parsed_format.conversion_specifications[i].data_ap = argument.argument_ap;
                 } else {
                     parsed_format.conversion_specifications[i].data_uintmax_t = argument.argument_unsigned_int;
                 }
@@ -259,7 +272,9 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
                 parsed_format.conversion_specifications[i].data_void_pointer = argument.argument_void_pointer;
                 break;
         }
-        parsed_format.conversion_specifications[i].length_modifier = LENGTH_MODIFIER_none;
+        if (length_modifier != LENGTH_MODIFIER_Z) {
+            parsed_format.conversion_specifications[i].length_modifier = LENGTH_MODIFIER_none;
+        }
         parsed_format.conversion_specifications[i].data_argument_index = (size_t) -1;
     }
     free(arguments);
