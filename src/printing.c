@@ -65,18 +65,18 @@ static size_t print_integer_conversion_specification(struct output_stream output
                                                      int32_t precision,
                                                      struct ap ap) {
     int8_t sign = ap_sign(ap_copy(ap));
+    size_t digits_count = unsigned_ap_digits_count(base, ap_abs(ap_copy(ap)));
     bool zero_mode = conversion_specification_flags.zero && !conversion_specification_flags.minus && precision == -1;
     size_t actual_precision = precision == -1 ? 1 : precision;
-    size_t digits_count = unsigned_ap_digits_count(base, ap_abs(ap_copy(ap)));
+    if (conversion_specification_flags.hash && base == 8 && actual_precision < digits_count + 1) {
+        actual_precision = digits_count + 1;
+    }
     size_t digits_to_be_printed_count = digits_count;
     if (digits_to_be_printed_count < actual_precision) {
         digits_to_be_printed_count = actual_precision;
     }
     size_t actual_width = digits_to_be_printed_count;
     if (conversion_specification_flags.space || conversion_specification_flags.plus || sign < 0) {
-        actual_width++;
-    }
-    if (conversion_specification_flags.hash && base == 8 && sign != 0) {
         actual_width++;
     }
     if (conversion_specification_flags.hash && base == 16 && sign != 0) {
@@ -100,9 +100,6 @@ static size_t print_integer_conversion_specification(struct output_stream output
         printed += print_char(output_stream, ' ');
     } else if (conversion_specification_flags.plus) {
         printed += print_char(output_stream, '+');
-    }
-    if (conversion_specification_flags.hash && base == 8 && sign != 0) {
-        printed += print_char(output_stream, '0');
     }
     if (conversion_specification_flags.hash && base == 16 && sign != 0) {
         printed += print_string(output_stream, uppercase ? "0X" : "0x");

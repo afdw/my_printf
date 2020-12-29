@@ -92,7 +92,6 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
                     conversion_specification.precision = -1;
                 }
             }
-            conversion_specification.data_argument_index = parse_argument_index(format, &data_argument_index_start, &current_sequential_argument_index);
             if (format[i] == 'h' && format[i + 1] == 'h') {
                 conversion_specification.length_modifier = LENGTH_MODIFIER_hh;
                 i += 2;
@@ -153,6 +152,8 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
             if (format[i] == '%') {
                 conversion_specification.conversion_specifier = CONVERSION_SPECIFIER_literal;
                 conversion_specification.data_char = '%';
+            } else {
+                conversion_specification.data_argument_index = parse_argument_index(format, &data_argument_index_start, &current_sequential_argument_index);
             }
         } else {
             conversion_specification.conversion_specifier = CONVERSION_SPECIFIER_literal;
