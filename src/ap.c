@@ -244,14 +244,24 @@ struct ap ap_multiply(struct ap x, struct ap y) {
 }
 
 static struct ap_division_result ap_unsigned_divide(struct ap numerator, struct ap denominator) {
+    struct ap denominator_shifts[8];
+    for (size_t i = 0; i < 8; i++) {
+        denominator_shifts[i] = ap_left_shift(ap_copy(denominator), i);
+    }
+    ap_destroy(denominator);
     struct ap quotient = ap_reserve(ap_create_empty(), numerator.length);
     struct ap remainder = ap_create_empty();
     if (numerator.length != 0) {
         for (size_t i = numerator.length - 1;; i--) {
             remainder = ap_add(ap_left_shift(remainder, 8), ap_from_uintmax_t(numerator.bytes[i]));
-            while (ap_compare(ap_copy(remainder), ap_copy(denominator)) >= 0) {
-                remainder = ap_subtract(remainder, ap_copy(denominator));
-                quotient.bytes[i]++;
+            for (size_t j = 8 - 1;; j--) {
+                if (ap_compare(ap_copy(remainder), ap_copy(denominator_shifts[j])) >= 0) {
+                    remainder = ap_subtract(remainder, ap_copy(denominator_shifts[j]));
+                    quotient.bytes[i] += 1 << j;
+                }
+                if (j == 0) {
+                    break;
+                }
             }
             if (i == 0) {
                 break;
@@ -259,7 +269,9 @@ static struct ap_division_result ap_unsigned_divide(struct ap numerator, struct 
         }
     }
     ap_destroy(numerator);
-    ap_destroy(denominator);
+    for (size_t i = 0; i < 8; i++) {
+        ap_destroy(denominator_shifts[i]);
+    }
     return (struct ap_division_result) {.quotient = ap_shrink_to_fit(quotient), .remainder = remainder};
 }
 
