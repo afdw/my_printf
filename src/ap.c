@@ -118,6 +118,7 @@ uintmax_t ap_to_uintmax_t(struct ap ap) {
 }
 
 struct ap ap_not(struct ap ap) {
+    ap = ap_reserve(ap, 1);
     for (size_t i = 0; i < ap.length; i++) {
         ap.bytes[i] = ~ap.bytes[i];
     }
@@ -194,6 +195,42 @@ struct ap ap_right_shift(struct ap ap, size_t amount) {
     }
     ap_destroy(ap);
     return ap_shrink_to_fit(result);
+}
+
+size_t ap_bit_scan_forward(struct ap ap) {
+    ap = ap_abs(ap);
+    for (size_t i = 0; i < ap.length; i++) {
+        for (size_t j = 0; j < 8; j++) {
+            if ((ap.bytes[i] & (1 << j)) != 0) {
+                ap_destroy(ap);
+                return i * 8 + j;
+            }
+        }
+    }
+    ap_destroy(ap);
+    return (size_t) -1;
+}
+
+size_t ap_bit_scan_reverse(struct ap ap) {
+    ap = ap_abs(ap);
+    if (ap.length != 0) {
+        for (size_t i = ap.length - 1;; i--) {
+            for (size_t j = 8 - 1;; j--) {
+                if ((ap.bytes[i] & (1 << j)) != 0) {
+                    ap_destroy(ap);
+                    return i * 8 + j;
+                }
+                if (j == 0) {
+                    break;
+                }
+            }
+            if (i == 0) {
+                break;
+            }
+        }
+    }
+    ap_destroy(ap);
+    return (size_t) -1;
 }
 
 struct ap ap_negate(struct ap ap) {

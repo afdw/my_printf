@@ -42,6 +42,10 @@ struct ap ap_left_shift(struct ap ap, size_t amount);
 
 struct ap ap_right_shift(struct ap ap, size_t amount);
 
+size_t ap_bit_scan_forward(struct ap ap);
+
+size_t ap_bit_scan_reverse(struct ap ap);
+
 struct ap ap_negate(struct ap ap);
 
 struct ap ap_add(struct ap x, struct ap y);
