@@ -29,6 +29,10 @@ struct fp_from_long_double_result fp_from_long_double(long double long_double);
 
 long double fp_to_long_double(struct fp fp);
 
+struct fp fp_from_ap(struct ap ap, size_t precision);
+
+struct ap fp_to_ap(struct fp fp);
+
 struct fp fp_negate(struct fp fp);
 
 struct fp fp_add(struct fp x, struct fp y);

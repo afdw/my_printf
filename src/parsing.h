@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "ap.h"
+#include "fp.h"
 
 struct conversion_specification_flags {
     bool hash;
@@ -61,7 +61,7 @@ struct conversion_specification {
         char data_char;
         intmax_t data_intmax_t;
         uintmax_t data_uintmax_t;
-        uintmax_t data_long_double;
+        long double data_long_double;
         struct ap data_ap;
         void *data_void_pointer;
         void *data_char_pointer;

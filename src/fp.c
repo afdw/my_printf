@@ -100,6 +100,26 @@ long double fp_to_long_double(struct fp fp) {
     return long_double;
 }
 
+struct fp fp_from_ap(struct ap ap, size_t precision) {
+    struct fp fp = fp_create_empty();
+    ap_destroy(fp.significand);
+    ap_destroy(fp.exponent);
+    fp.precision = precision;
+    fp.significand = ap;
+    fp.exponent = ap_from_uintmax_t(precision);
+    return fp_normalize(fp);
+}
+
+struct ap fp_to_ap(struct fp fp) {
+    struct ap real_exponent = ap_subtract(fp.exponent, ap_from_uintmax_t(fp.precision));
+    size_t real_exponent_size_t = ap_to_uintmax_t(ap_abs(ap_copy(real_exponent)));
+    if (ap_sign(real_exponent) >= 0) {
+        return ap_left_shift(fp.significand, real_exponent_size_t);
+    } else {
+        return ap_right_shift(fp.significand, real_exponent_size_t);
+    }
+}
+
 struct fp fp_negate(struct fp fp) {
     fp.significand = ap_negate(fp.significand);
     return fp_normalize(fp);
@@ -116,11 +136,13 @@ struct fp fp_add(struct fp x, struct fp y) {
         x = y;
         y = tmp;
     }
-    struct ap exponent_difference = ap_subtract(x.exponent, ap_copy(y.exponent));
+    struct ap exponent_difference = ap_subtract(ap_copy(x.exponent), ap_copy(y.exponent));
     if (ap_compare(ap_copy(exponent_difference), ap_from_uintmax_t(result.precision)) >= 0) {
+        ap_destroy(exponent_difference);
         fp_destroy(y);
         return x;
     }
+    ap_destroy(x.exponent);
     ap_destroy(result.significand);
     ap_destroy(result.exponent);
     result.significand = ap_add(ap_left_shift(x.significand, ap_to_uintmax_t(exponent_difference)), y.significand);

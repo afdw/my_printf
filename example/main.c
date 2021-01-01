@@ -21,9 +21,5 @@ void example_factorial() {
 int main(int argc, char *argv[]) {
     example_basic_numbers();
     example_factorial();
-    struct fp numerator = fp_from_long_double(123).fp;
-    struct fp denominator = fp_from_long_double(0.3).fp;
-    struct fp fp = fp_divide(numerator, denominator);
-    my_printf("%Zd %Zd\n", fp.significand, fp.exponent);
     return 0;
 }

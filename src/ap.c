@@ -189,8 +189,8 @@ struct ap ap_right_shift(struct ap ap, size_t amount) {
         if (i >= amount / 8 && i < result.length + amount / 8) {
             result.bytes[i - amount / 8] |= (ap.bytes[i] >> (amount % 8)) & 0xFF;
         }
-        if (i + 1 >= amount / 8 && i + 1 < result.length + amount / 8) {
-            result.bytes[i - amount / 8 + 1] |= (uint8_t) (((uint16_t) ap.bytes[i] << (8 - amount % 8)) & 0xFF);
+        if (i >= amount / 8 + 1 && i < result.length + amount / 8 + 1) {
+            result.bytes[i - amount / 8 - 1] |= (uint8_t) (((uint16_t) ap.bytes[i] << (8 - amount % 8)) & 0xFF);
         }
     }
     ap_destroy(ap);
