@@ -26,9 +26,19 @@ void example_huge_precision() {
     my_printf("%f\n", DBL_MAX);
 }
 
+void example_hexadecimal_float() {
+    my_printf("%a\n", 0);
+    my_printf("%a\n", 0.3);
+    my_printf("%a\n", 1231231.0 / 256.0);
+    my_printf("%.100a\n", 1231231.0 / 256.0);
+    my_printf("%a\n", -8000.0);
+    my_printf("%a\n", -1.0 / 0.0);
+}
+
 int main(int argc, char *argv[]) {
     example_basic_numbers();
     example_factorial();
     example_huge_precision();
+    example_hexadecimal_float();
     return 0;
 }
