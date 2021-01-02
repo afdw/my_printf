@@ -23,6 +23,7 @@ void example_huge_precision() {
     my_printf("%.2000e\n", 623.28376510723481);
     my_printf("%.2000e\n", DBL_MIN);
     my_printf("%.2000Fe\n", fp_divide(fp_extend(fp_from_long_double(1.0).fp, 8000), fp_from_long_double(3.0).fp));
+    my_printf("%f\n", DBL_MAX);
 }
 
 int main(int argc, char *argv[]) {
