@@ -128,6 +128,10 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
                 conversion_specification.length_modifier = LENGTH_MODIFIER_Z;
                 i++;
             }
+            if (format[i] == 'F') {
+                conversion_specification.length_modifier = LENGTH_MODIFIER_F;
+                i++;
+            }
 #define MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER(x) if (format[i] == #x[0]) { \
     conversion_specification.conversion_specifier = CONVERSION_SPECIFIER_##x; \
 }

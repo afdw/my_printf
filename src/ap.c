@@ -11,6 +11,18 @@ static struct ap ap_create_empty() {
     };
 }
 
+static bool ap_negative(struct ap ap) {
+    return ap.length != 0 && (ap.bytes[ap.length - 1] & 0b10000000) != 0;
+}
+
+static uint8_t ap_padding_byte(struct ap ap) {
+    return ap_negative(ap) ? 0xFF : 0;
+}
+
+static uint8_t ap_byte(struct ap ap, size_t i) {
+    return i < ap.length ? ap.bytes[i] : ap_padding_byte(ap);
+}
+
 struct ap ap_copy(struct ap ap) {
     if (ap.length != 0) {
         struct ap copy = {
@@ -26,10 +38,9 @@ struct ap ap_copy(struct ap ap) {
 
 struct ap ap_reserve(struct ap ap, size_t new_length) {
     if (ap.length < new_length) {
-        bool negative = ap_sign(ap_copy(ap)) < 0;
         ap.bytes = realloc(ap.bytes, new_length);
         for (size_t i = ap.length; i < new_length; i++) {
-            ap.bytes[i] = negative ? 0xFF : 0;
+            ap.bytes[i] = ap_padding_byte(ap);
         }
         ap.length = new_length;
     }
@@ -129,10 +140,8 @@ struct ap ap_and(struct ap x, struct ap y) {
     struct ap result = ap_create_empty();
     result = ap_reserve(result, x.length);
     result = ap_reserve(result, y.length);
-    x = ap_reserve(x, result.length);
-    y = ap_reserve(y, result.length);
     for (size_t i = 0; i < result.length; i++) {
-        result.bytes[i] = x.bytes[i] & y.bytes[i];
+        result.bytes[i] = ap_byte(x, i) & ap_byte(y, i);
     }
     ap_destroy(x);
     ap_destroy(y);
@@ -143,10 +152,8 @@ struct ap ap_or(struct ap x, struct ap y) {
     struct ap result = ap_create_empty();
     result = ap_reserve(result, x.length);
     result = ap_reserve(result, y.length);
-    x = ap_reserve(x, result.length);
-    y = ap_reserve(y, result.length);
     for (size_t i = 0; i < result.length; i++) {
-        result.bytes[i] = x.bytes[i] | y.bytes[i];
+        result.bytes[i] = ap_byte(x, i) | ap_byte(y, i);
     }
     ap_destroy(x);
     ap_destroy(y);
@@ -157,10 +164,8 @@ struct ap ap_xor(struct ap x, struct ap y) {
     struct ap result = ap_create_empty();
     result = ap_reserve(result, x.length);
     result = ap_reserve(result, y.length);
-    x = ap_reserve(x, result.length);
-    y = ap_reserve(y, result.length);
     for (size_t i = 0; i < result.length; i++) {
-        result.bytes[i] = x.bytes[i] ^ y.bytes[i];
+        result.bytes[i] = ap_byte(x, i) ^ ap_byte(y, i);
     }
     ap_destroy(x);
     ap_destroy(y);
@@ -234,18 +239,23 @@ size_t ap_bit_scan_reverse(struct ap ap) {
 }
 
 struct ap ap_negate(struct ap ap) {
-    return ap_shrink_to_fit(ap_add(ap_not(ap), ap_from_intmax_t(1)));
+    ap = ap_reserve(ap, ap.length + 1);
+    uint8_t carry = 0;
+    for (size_t i = 0; i < ap.length; i++) {
+        uint16_t addition_result = (uint16_t) (uint8_t) (~ap.bytes[i]) + (uint16_t) (i == 0 ? 1 : 0) + (uint16_t) carry;
+        ap.bytes[i] = (uint8_t) (addition_result & 0xFF);
+        carry = (uint8_t) ((addition_result >> 8) & 0xFF);
+    }
+    return ap_shrink_to_fit(ap);
 }
 
 struct ap ap_add(struct ap x, struct ap y) {
     struct ap result = ap_create_empty();
     result = ap_reserve(result, x.length + 1);
     result = ap_reserve(result, y.length + 1);
-    x = ap_reserve(x, result.length);
-    y = ap_reserve(y, result.length);
     uint8_t carry = 0;
     for (size_t i = 0; i < result.length; i++) {
-        uint16_t addition_result = (uint16_t) x.bytes[i] + (uint16_t) y.bytes[i] + (uint16_t) carry;
+        uint16_t addition_result = (uint16_t) ap_byte(x, i) + (uint16_t) ap_byte(y, i) + (uint16_t) carry;
         result.bytes[i] = (uint8_t) (addition_result & 0xFF);
         carry = (uint8_t) ((addition_result >> 8) & 0xFF);
     }
@@ -292,9 +302,13 @@ static struct ap_division_result ap_unsigned_divide(struct ap numerator, struct 
         for (size_t i = numerator.length - 1;; i--) {
             remainder = ap_add(ap_left_shift(remainder, 8), ap_from_uintmax_t(numerator.bytes[i]));
             for (size_t j = 8 - 1;; j--) {
-                if (ap_compare(ap_copy(remainder), ap_copy(denominator_shifts[j])) >= 0) {
-                    remainder = ap_subtract(remainder, ap_copy(denominator_shifts[j]));
+                struct ap subtraction_result = ap_subtract(ap_copy(remainder), ap_copy(denominator_shifts[j]));
+                if (!ap_negative(subtraction_result)) {
+                    ap_destroy(remainder);
+                    remainder = subtraction_result;
                     quotient.bytes[i] += 1 << j;
+                } else {
+                    ap_destroy(subtraction_result);
                 }
                 if (j == 0) {
                     break;
@@ -313,8 +327,8 @@ static struct ap_division_result ap_unsigned_divide(struct ap numerator, struct 
 }
 
 struct ap_division_result ap_divide(struct ap numerator, struct ap denominator) {
-    bool numerator_negative = ap_sign(ap_copy(numerator)) < 0;
-    bool denominator_negative = ap_sign(ap_copy(denominator)) < 0;
+    bool numerator_negative = ap_negative(numerator);
+    bool denominator_negative = ap_negative(denominator);
     struct ap_division_result ap_division_result = ap_unsigned_divide(ap_abs(numerator), ap_abs(denominator));
     if (numerator_negative != denominator_negative) {
         ap_division_result.quotient = ap_negate(ap_division_result.quotient);
@@ -326,18 +340,26 @@ struct ap_division_result ap_divide(struct ap numerator, struct ap denominator) 
 }
 
 struct ap ap_power(struct ap base, struct ap exponent) {
-    if (ap_sign(ap_copy(exponent)) < 0) {
+    int8_t sign = ap_sign(ap_copy(exponent));
+    if (sign < 0) {
         ap_destroy(base);
         ap_destroy(exponent);
         return ap_from_intmax_t(0);
     }
-    struct ap result = ap_from_intmax_t(1);
-    for (; ap_sign(ap_copy(exponent)) > 0; exponent = ap_subtract(exponent, ap_from_intmax_t(1))) {
-        result = ap_multiply(result, ap_copy(base));
+    if (sign == 0) {
+        ap_destroy(base);
+        ap_destroy(exponent);
+        return ap_from_intmax_t(1);
     }
-    ap_destroy(base);
-    ap_destroy(exponent);
-    return result;
+    struct ap_division_result ap_division_result = ap_divide(exponent, ap_from_intmax_t(2));
+    struct ap half_power = ap_power(ap_copy(base), ap_division_result.quotient);
+    struct ap power = ap_multiply(ap_copy(half_power), half_power);
+    if (ap_sign(ap_division_result.remainder) == 0) {
+        ap_destroy(base);
+        return power;
+    } else {
+        return ap_multiply(power, base);
+    }
 }
 
 int8_t ap_sign(struct ap ap) {

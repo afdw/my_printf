@@ -17,6 +17,7 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
         ARGUMENT_TYPE_SIZE_T,
         ARGUMENT_TYPE_PTRDIFF_T,
         ARGUMENT_TYPE_AP,
+        ARGUMENT_TYPE_FP,
         ARGUMENT_TYPE_VOID_POINTER,
         ARGUMENT_TYPE_CHAR_POINTER,
     };
@@ -34,6 +35,7 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
         size_t argument_size_t;
         ptrdiff_t argument_ptrdiff_t;
         struct ap argument_ap;
+        struct fp argument_fp;
         void *argument_void_pointer;
         char *argument_char_pointer;
     };
@@ -111,6 +113,8 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
             case CONVERSION_SPECIFIER_A:
                 if (length_modifier == LENGTH_MODIFIER_L) {
                     data_argument_type = ARGUMENT_TYPE_LONG_DOUBLE;
+                } else if (length_modifier == LENGTH_MODIFIER_F) {
+                    data_argument_type = ARGUMENT_TYPE_FP;
                 } else {
                     data_argument_type = ARGUMENT_TYPE_DOUBLE;
                 }
@@ -168,6 +172,9 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
                 break;
             case ARGUMENT_TYPE_AP:
                 arguments[i].argument_ap = va_arg(va_list, struct ap);
+                break;
+            case ARGUMENT_TYPE_FP:
+                arguments[i].argument_fp = va_arg(va_list, struct fp);
                 break;
             case ARGUMENT_TYPE_VOID_POINTER:
                 arguments[i].argument_void_pointer = va_arg(va_list, void *);
@@ -258,6 +265,8 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
             case CONVERSION_SPECIFIER_A:
                 if (length_modifier == LENGTH_MODIFIER_L) {
                     parsed_format.conversion_specifications[i].data_long_double = argument.argument_long_double;
+                } else if (length_modifier == LENGTH_MODIFIER_F) {
+                    parsed_format.conversion_specifications[i].data_fp = argument.argument_fp;
                 } else {
                     parsed_format.conversion_specifications[i].data_long_double = argument.argument_double;
                 }
@@ -272,7 +281,7 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
                 parsed_format.conversion_specifications[i].data_void_pointer = argument.argument_void_pointer;
                 break;
         }
-        if (length_modifier != LENGTH_MODIFIER_Z) {
+        if (length_modifier != LENGTH_MODIFIER_Z && length_modifier != LENGTH_MODIFIER_F) {
             parsed_format.conversion_specifications[i].length_modifier = LENGTH_MODIFIER_none;
         }
         parsed_format.conversion_specifications[i].data_argument_index = (size_t) -1;

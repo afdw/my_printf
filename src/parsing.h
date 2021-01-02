@@ -25,6 +25,7 @@ enum length_modifier {
     LENGTH_MODIFIER_z,
     LENGTH_MODIFIER_t,
     LENGTH_MODIFIER_Z,
+    LENGTH_MODIFIER_F,
 };
 
 enum conversion_specifier {
@@ -63,6 +64,7 @@ struct conversion_specification {
         uintmax_t data_uintmax_t;
         long double data_long_double;
         struct ap data_ap;
+        struct fp data_fp;
         void *data_void_pointer;
         void *data_char_pointer;
     };

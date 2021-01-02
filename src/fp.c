@@ -183,16 +183,24 @@ struct fp fp_divide(struct fp numerator, struct fp denominator) {
 }
 
 struct fp fp_integer_power(struct fp base, struct ap exponent) {
-    struct fp result = fp_from_long_double(1.0).fp;
-    for (; ap_sign(ap_copy(exponent)) < 0; exponent = ap_add(exponent, ap_from_intmax_t(1))) {
-        result = fp_divide(result, fp_copy(base));
+    int8_t sign = ap_sign(ap_copy(exponent));
+    if (sign < 0) {
+        return fp_divide(fp_from_long_double(1.0).fp, fp_integer_power(base, ap_negate(exponent)));
     }
-    for (; ap_sign(ap_copy(exponent)) > 0; exponent = ap_subtract(exponent, ap_from_intmax_t(1))) {
-        result = fp_multiply(result, fp_copy(base));
+    if (sign == 0) {
+        fp_destroy(base);
+        ap_destroy(exponent);
+        return fp_from_long_double(1.0).fp;
     }
-    fp_destroy(base);
-    ap_destroy(exponent);
-    return result;
+    struct ap_division_result ap_division_result = ap_divide(exponent, ap_from_intmax_t(2));
+    struct fp half_power = fp_integer_power(fp_copy(base), ap_division_result.quotient);
+    struct fp power = fp_multiply(fp_copy(half_power), half_power);
+    if (ap_sign(ap_division_result.remainder) == 0) {
+        fp_destroy(base);
+        return power;
+    } else {
+        return fp_multiply(power, base);
+    }
 }
 
 int8_t fp_sign(struct fp fp) {

@@ -1,3 +1,4 @@
+#include <float.h>
 #include "../src/fp.h"
 #include "../src/library.h"
 
@@ -18,8 +19,15 @@ void example_factorial() {
     ap_destroy(factorial);
 }
 
+void example_huge_precision() {
+    my_printf("%.2000e\n", 623.28376510723481);
+    my_printf("%.2000e\n", DBL_MIN);
+    my_printf("%.2000Fe\n", fp_divide(fp_extend(fp_from_long_double(1.0).fp, 8000), fp_from_long_double(3.0).fp));
+}
+
 int main(int argc, char *argv[]) {
     example_basic_numbers();
     example_factorial();
+    example_huge_precision();
     return 0;
 }
