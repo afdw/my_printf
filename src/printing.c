@@ -134,7 +134,7 @@ struct to_digits_result {
 struct to_digits_result to_digits(int32_t precision, struct fp fp) {
     fp = fp_extend(fp, precision * 4);
     bool zero = fp_sign(fp_copy(fp)) == 0;
-    struct ap ap_precision_power = ap_power(ap_from_intmax_t(10), ap_from_uintmax_t(precision));
+    struct ap ap_precision_power = ap_power(ap_from_uintmax_t(10), ap_from_uintmax_t(precision));
     struct fp fp_precision_power = fp_from_ap(ap_copy(ap_precision_power), fp.precision);
     struct ap starting_exponent;
     if (zero) {
@@ -144,7 +144,7 @@ struct to_digits_result to_digits(int32_t precision, struct fp fp) {
         ap_destroy(exponent_division_result.remainder);
         starting_exponent = ap_subtract(exponent_division_result.quotient, ap_from_intmax_t(2));
     }
-    struct fp normalized = fp_divide(fp_abs(fp_copy(fp)), fp_integer_power(fp_from_ap(ap_from_intmax_t(10), fp.precision), ap_copy(starting_exponent)));
+    struct fp normalized = fp_divide(fp_abs(fp_copy(fp)), fp_integer_power(fp_from_ap(ap_from_uintmax_t(10), fp.precision), ap_copy(starting_exponent)));
     fp_destroy(fp);
     for (struct ap exponent = starting_exponent;;) {
         if (zero || fp_compare(fp_copy(normalized), fp_from_long_double(0.1).fp) >= 0 && fp_compare(fp_copy(normalized), fp_from_long_double(10.0).fp) < 0) {
@@ -152,7 +152,7 @@ struct to_digits_result to_digits(int32_t precision, struct fp fp) {
             struct ap_division_result multiplied_division_result = ap_divide(multiplied, ap_copy(ap_precision_power));
             struct ap quotient = multiplied_division_result.quotient;
             struct ap remainder = multiplied_division_result.remainder;
-            if (zero || ap_compare(ap_copy(quotient), ap_from_intmax_t(1)) >= 0 && ap_compare(ap_copy(quotient), ap_from_intmax_t(10)) < 0) {
+            if (zero || ap_compare(ap_copy(quotient), ap_from_uintmax_t(1)) >= 0 && ap_compare(ap_copy(quotient), ap_from_uintmax_t(10)) < 0) {
                 fp_destroy(normalized);
                 ap_destroy(ap_precision_power);
                 fp_destroy(fp_precision_power);
@@ -171,7 +171,22 @@ struct to_digits_result to_digits(int32_t precision, struct fp fp) {
     }
 }
 
+struct ap remove_trailing_zeros(struct ap ap) {
+    while (ap_sign(ap_copy(ap)) != 0) {
+        struct ap_division_result ap_division_result = ap_divide(ap_copy(ap), ap_from_uintmax_t(10));
+        if (ap_sign(ap_division_result.remainder) == 0) {
+            ap_destroy(ap);
+            ap = ap_division_result.quotient;
+        } else {
+            ap_destroy(ap_division_result.quotient);
+            break;
+        }
+    }
+    return ap;
+}
+
 static size_t print_exponential_decimal_conversion_specification(struct output_stream output_stream,
+                                                                 bool no_trailing_zeros,
                                                                  bool uppercase,
                                                                  struct conversion_specification_flags conversion_specification_flags,
                                                                  int32_t field_width,
@@ -187,14 +202,25 @@ static size_t print_exponential_decimal_conversion_specification(struct output_s
     size_t actual_precision = (infinity || nan) ? 0 : precision == -1 ? 6 : precision;
     bool zero_mode = !infinity && !nan && conversion_specification_flags.zero && !conversion_specification_flags.minus;
     struct to_digits_result to_digits_result = to_digits(actual_precision, fp);
-    size_t rest_digits_digits_count = unsigned_ap_digits_count(10, ap_copy(to_digits_result.rest_digits));
-    size_t exponent_digits_count = unsigned_ap_digits_count(10, ap_abs(ap_copy(to_digits_result.exponent)));
-    size_t actual_width = actual_precision + 3;
+    struct ap exponent = to_digits_result.exponent;
+    uint8_t first_digit = to_digits_result.first_digit;
+    struct ap rest_digits = to_digits_result.rest_digits;
+    size_t initial_rest_digits_digits_count = unsigned_ap_digits_count(10, ap_copy(rest_digits));
+    size_t rest_digits_digits_count = initial_rest_digits_digits_count;
+    if (!infinity && !nan && no_trailing_zeros && !conversion_specification_flags.hash) {
+        rest_digits = remove_trailing_zeros(rest_digits);
+        rest_digits_digits_count = unsigned_ap_digits_count(10, ap_copy(rest_digits));
+        if (ap_sign(ap_copy(rest_digits)) == 0) {
+            initial_rest_digits_digits_count = actual_precision;
+        }
+    }
+    size_t exponent_digits_count = unsigned_ap_digits_count(10, ap_abs(ap_copy(exponent)));
+    size_t actual_width = actual_precision - (initial_rest_digits_digits_count - rest_digits_digits_count) + 3;
     if (conversion_specification_flags.space || conversion_specification_flags.plus || negative) {
         actual_width++;
     }
     if (!infinity && !nan) {
-        if (actual_precision != 0 || conversion_specification_flags.hash) {
+        if (initial_rest_digits_digits_count < actual_precision || rest_digits_digits_count != 0 || conversion_specification_flags.hash) {
             actual_width++;
         }
         if (exponent_digits_count < 2) {
@@ -226,20 +252,20 @@ static size_t print_exponential_decimal_conversion_specification(struct output_s
     } else if (nan) {
         printed += print_string(output_stream, uppercase ? "NAN" : "nan");
     } else {
-        printed += print_char(output_stream, (char) ('0' + to_digits_result.first_digit));
-        if (actual_precision != 0 || conversion_specification_flags.hash) {
+        printed += print_char(output_stream, (char) ('0' + first_digit));
+        if (initial_rest_digits_digits_count < actual_precision || rest_digits_digits_count != 0 || conversion_specification_flags.hash) {
             printed += print_char(output_stream, '.');
         }
-        if (rest_digits_digits_count < actual_precision) {
-            printed += print_repeated_char(output_stream, actual_precision - rest_digits_digits_count, '0');
+        if (initial_rest_digits_digits_count < actual_precision) {
+            printed += print_repeated_char(output_stream, actual_precision - initial_rest_digits_digits_count, '0');
         }
-        printed += print_unsigned_ap(output_stream, false, 10, to_digits_result.rest_digits, rest_digits_digits_count);
+        printed += print_unsigned_ap(output_stream, false, 10, rest_digits, rest_digits_digits_count);
         printed += print_char(output_stream, uppercase ? 'E' : 'e');
-        printed += print_char(output_stream, ap_sign(ap_copy(to_digits_result.exponent)) < 0 ? '-' : '+');
+        printed += print_char(output_stream, ap_sign(ap_copy(exponent)) < 0 ? '-' : '+');
         if (exponent_digits_count < 2) {
             printed += print_repeated_char(output_stream, 2 - exponent_digits_count, '0');
         }
-        printed += print_unsigned_ap(output_stream, false, 10, ap_abs(to_digits_result.exponent), exponent_digits_count);
+        printed += print_unsigned_ap(output_stream, false, 10, ap_abs(exponent), exponent_digits_count);
     }
     if (conversion_specification_flags.minus) {
         printed += print_repeated_char(output_stream, padding, ' ');
@@ -248,6 +274,7 @@ static size_t print_exponential_decimal_conversion_specification(struct output_s
 }
 
 static size_t print_fixed_decimal_conversion_specification(struct output_stream output_stream,
+                                                           bool no_trailing_zeros,
                                                            bool uppercase,
                                                            struct conversion_specification_flags conversion_specification_flags,
                                                            int32_t field_width,
@@ -266,7 +293,7 @@ static size_t print_fixed_decimal_conversion_specification(struct output_stream 
         fp_precision += ap_to_uintmax_t(ap_copy(fp.exponent));
     }
     bool zero_mode = !infinity && !nan && conversion_specification_flags.zero && !conversion_specification_flags.minus;
-    struct ap actual_precision_power = ap_power(ap_from_intmax_t(10), ap_from_uintmax_t(actual_precision));
+    struct ap actual_precision_power = ap_power(ap_from_uintmax_t(10), ap_from_uintmax_t(actual_precision));
     struct ap_division_result multiplied_division_result = ap_divide(
         round_even(fp_multiply(fp_extend(fp_abs(fp), fp_precision), fp_from_ap(ap_copy(actual_precision_power), fp_precision))),
         actual_precision_power
@@ -274,13 +301,21 @@ static size_t print_fixed_decimal_conversion_specification(struct output_stream 
     struct ap first_digits = multiplied_division_result.quotient;
     struct ap rest_digits = multiplied_division_result.remainder;
     size_t first_digits_digits_count = unsigned_ap_digits_count(10, ap_copy(first_digits));
-    size_t rest_digits_digits_count = unsigned_ap_digits_count(10, ap_copy(rest_digits));
-    size_t actual_width = actual_precision;
+    size_t initial_rest_digits_digits_count = unsigned_ap_digits_count(10, ap_copy(rest_digits));
+    size_t rest_digits_digits_count = initial_rest_digits_digits_count;
+    if (!infinity && !nan && no_trailing_zeros && !conversion_specification_flags.hash) {
+        rest_digits = remove_trailing_zeros(rest_digits);
+        rest_digits_digits_count = unsigned_ap_digits_count(10, ap_copy(rest_digits));
+        if (ap_sign(ap_copy(rest_digits)) == 0) {
+            initial_rest_digits_digits_count = actual_precision;
+        }
+    }
+    size_t actual_width = actual_precision - (initial_rest_digits_digits_count - rest_digits_digits_count);
     if (conversion_specification_flags.space || conversion_specification_flags.plus || negative) {
         actual_width++;
     }
     if (!infinity && !nan) {
-        if (actual_precision != 0 || conversion_specification_flags.hash) {
+        if (initial_rest_digits_digits_count < actual_precision || rest_digits_digits_count != 0 || conversion_specification_flags.hash) {
             actual_width++;
         }
         if (first_digits_digits_count == 0) {
@@ -317,11 +352,11 @@ static size_t print_fixed_decimal_conversion_specification(struct output_stream 
         } else {
             printed += print_unsigned_ap(output_stream, false, 10, first_digits, first_digits_digits_count);
         }
-        if (actual_precision != 0 || conversion_specification_flags.hash) {
+        if (initial_rest_digits_digits_count < actual_precision || rest_digits_digits_count != 0 || conversion_specification_flags.hash) {
             printed += print_char(output_stream, '.');
         }
-        if (rest_digits_digits_count < actual_precision) {
-            printed += print_repeated_char(output_stream, actual_precision - rest_digits_digits_count, '0');
+        if (initial_rest_digits_digits_count < actual_precision) {
+            printed += print_repeated_char(output_stream, actual_precision - initial_rest_digits_digits_count, '0');
         }
         printed += print_unsigned_ap(output_stream, false, 10, rest_digits, rest_digits_digits_count);
     }
@@ -329,6 +364,55 @@ static size_t print_fixed_decimal_conversion_specification(struct output_stream 
         printed += print_repeated_char(output_stream, padding, ' ');
     }
     return printed;
+}
+
+static size_t print_shorter_decimal_conversion_specification(struct output_stream output_stream,
+                                                             bool uppercase,
+                                                             struct conversion_specification_flags conversion_specification_flags,
+                                                             int32_t field_width,
+                                                             int32_t precision,
+                                                             struct fp fp,
+                                                             bool negative,
+                                                             bool infinity,
+                                                             bool nan) {
+    if (infinity || nan) {
+        fp_destroy(fp);
+        fp = fp_from_long_double(0.0).fp;
+    }
+    size_t actual_precision = precision == -1 ? 6 : precision == 0 ? 1 : precision;
+    struct to_digits_result to_digits_result = to_digits(actual_precision - 1, fp_copy(fp));
+    if (ap_compare(ap_copy(to_digits_result.exponent), ap_from_intmax_t(-4)) < 0 || ap_compare(ap_copy(to_digits_result.exponent), ap_from_uintmax_t(actual_precision)) >= 0) {
+        ap_destroy(to_digits_result.rest_digits);
+        ap_destroy(to_digits_result.exponent);
+        actual_precision--;
+        return print_exponential_decimal_conversion_specification(
+            output_stream,
+            true,
+            uppercase,
+            conversion_specification_flags,
+            field_width,
+            actual_precision,
+            fp,
+            negative,
+            infinity,
+            nan
+        );
+    } else {
+        actual_precision -= ap_to_intmax_t(to_digits_result.exponent) + 1;
+        ap_destroy(to_digits_result.rest_digits);
+        return print_fixed_decimal_conversion_specification(
+            output_stream,
+            true,
+            uppercase,
+            conversion_specification_flags,
+            field_width,
+            actual_precision,
+            fp,
+            negative,
+            infinity,
+            nan
+        );
+    }
 }
 
 static size_t print_conversion_specification(struct output_stream output_stream, struct conversion_specification conversion_specification) {
@@ -392,6 +476,7 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 return print_exponential_decimal_conversion_specification(
                     output_stream,
                     false,
+                    false,
                     conversion_specification.conversion_specification_flags,
                     conversion_specification.field_width,
                     conversion_specification.precision,
@@ -404,6 +489,7 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 struct fp_from_long_double_result fp_from_long_double_result = fp_from_long_double(conversion_specification.data_long_double);
                 return print_exponential_decimal_conversion_specification(
                     output_stream,
+                    false,
                     false,
                     conversion_specification.conversion_specification_flags,
                     conversion_specification.field_width,
@@ -419,6 +505,7 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 bool negative = fp_sign(fp_copy(conversion_specification.data_fp)) < 0;
                 return print_exponential_decimal_conversion_specification(
                     output_stream,
+                    false,
                     true,
                     conversion_specification.conversion_specification_flags,
                     conversion_specification.field_width,
@@ -432,6 +519,7 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 struct fp_from_long_double_result fp_from_long_double_result = fp_from_long_double(conversion_specification.data_long_double);
                 return print_exponential_decimal_conversion_specification(
                     output_stream,
+                    false,
                     true,
                     conversion_specification.conversion_specification_flags,
                     conversion_specification.field_width,
@@ -448,6 +536,7 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 return print_fixed_decimal_conversion_specification(
                     output_stream,
                     false,
+                    false,
                     conversion_specification.conversion_specification_flags,
                     conversion_specification.field_width,
                     conversion_specification.precision,
@@ -460,6 +549,7 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 struct fp_from_long_double_result fp_from_long_double_result = fp_from_long_double(conversion_specification.data_long_double);
                 return print_fixed_decimal_conversion_specification(
                     output_stream,
+                    false,
                     false,
                     conversion_specification.conversion_specification_flags,
                     conversion_specification.field_width,
@@ -475,6 +565,7 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 bool negative = fp_sign(fp_copy(conversion_specification.data_fp)) < 0;
                 return print_fixed_decimal_conversion_specification(
                     output_stream,
+                    false,
                     true,
                     conversion_specification.conversion_specification_flags,
                     conversion_specification.field_width,
@@ -488,6 +579,7 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 struct fp_from_long_double_result fp_from_long_double_result = fp_from_long_double(conversion_specification.data_long_double);
                 return print_fixed_decimal_conversion_specification(
                     output_stream,
+                    false,
                     true,
                     conversion_specification.conversion_specification_flags,
                     conversion_specification.field_width,
@@ -499,9 +591,61 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                 );
             }
         case CONVERSION_SPECIFIER_g:
-            break;
+            if (conversion_specification.length_modifier == LENGTH_MODIFIER_F) {
+                bool negative = fp_sign(fp_copy(conversion_specification.data_fp)) < 0;
+                return print_shorter_decimal_conversion_specification(
+                    output_stream,
+                    false,
+                    conversion_specification.conversion_specification_flags,
+                    conversion_specification.field_width,
+                    conversion_specification.precision,
+                    conversion_specification.data_fp,
+                    negative,
+                    false,
+                    false
+                );
+            } else {
+                struct fp_from_long_double_result fp_from_long_double_result = fp_from_long_double(conversion_specification.data_long_double);
+                return print_shorter_decimal_conversion_specification(
+                    output_stream,
+                    false,
+                    conversion_specification.conversion_specification_flags,
+                    conversion_specification.field_width,
+                    conversion_specification.precision,
+                    fp_from_long_double_result.fp,
+                    fp_from_long_double_result.negative,
+                    fp_from_long_double_result.infinity,
+                    fp_from_long_double_result.nan
+                );
+            }
         case CONVERSION_SPECIFIER_G:
-            break;
+            if (conversion_specification.length_modifier == LENGTH_MODIFIER_F) {
+                bool negative = fp_sign(fp_copy(conversion_specification.data_fp)) < 0;
+                return print_shorter_decimal_conversion_specification(
+                    output_stream,
+                    true,
+                    conversion_specification.conversion_specification_flags,
+                    conversion_specification.field_width,
+                    conversion_specification.precision,
+                    conversion_specification.data_fp,
+                    negative,
+                    false,
+                    false
+                );
+            } else {
+                struct fp_from_long_double_result fp_from_long_double_result = fp_from_long_double(conversion_specification.data_long_double);
+                return print_shorter_decimal_conversion_specification(
+                    output_stream,
+                    true,
+                    conversion_specification.conversion_specification_flags,
+                    conversion_specification.field_width,
+                    conversion_specification.precision,
+                    fp_from_long_double_result.fp,
+                    fp_from_long_double_result.negative,
+                    fp_from_long_double_result.infinity,
+                    fp_from_long_double_result.nan
+                );
+            }
         case CONVERSION_SPECIFIER_a:
             break;
         case CONVERSION_SPECIFIER_A:
