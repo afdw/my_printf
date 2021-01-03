@@ -815,17 +815,40 @@ static size_t print_conversion_specification(struct output_stream output_stream,
             }
         case CONVERSION_SPECIFIER_c: {
             size_t printed = 0;
-            if (!conversion_specification.conversion_specification_flags.minus && conversion_specification.field_width > 1) {
+            if (!conversion_specification.conversion_specification_flags.minus && 1 < conversion_specification.field_width) {
                 printed += print_repeated_char(output_stream, conversion_specification.field_width - 1, ' ');
             }
             printed += print_char(output_stream, conversion_specification.data_char);
-            if (conversion_specification.conversion_specification_flags.minus && conversion_specification.field_width > 1) {
+            if (conversion_specification.conversion_specification_flags.minus && 1 < conversion_specification.field_width) {
                 printed += print_repeated_char(output_stream, conversion_specification.field_width - 1, ' ');
             }
             return printed;
         }
-        case CONVERSION_SPECIFIER_s:
-            break;
+        case CONVERSION_SPECIFIER_s: {
+            char *string = conversion_specification.data_char_pointer;
+            if (string == NULL) {
+                if (conversion_specification.precision == -1 || conversion_specification.precision >= 6) {
+                    string = "(null)";
+                } else {
+                    string = "";
+                }
+            }
+            size_t length = 0;
+            while ((conversion_specification.precision == -1 || length < conversion_specification.precision) && string[length] != '\0') {
+                length++;
+            }
+            size_t printed = 0;
+            if (!conversion_specification.conversion_specification_flags.minus && conversion_specification.field_width != -1 && length < conversion_specification.field_width) {
+                printed += print_repeated_char(output_stream, conversion_specification.field_width - length, ' ');
+            }
+            for (size_t i = 0; i < length; i++) {
+                printed += print_char(output_stream, string[i]);
+            }
+            if (conversion_specification.conversion_specification_flags.minus && conversion_specification.field_width != -1 && length < conversion_specification.field_width) {
+                printed += print_repeated_char(output_stream, conversion_specification.field_width - length, ' ');
+            }
+            return printed;
+        }
         case CONVERSION_SPECIFIER_p:
             break;
     }

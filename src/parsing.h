@@ -66,7 +66,7 @@ struct conversion_specification {
         struct ap data_ap;
         struct fp data_fp;
         void *data_void_pointer;
-        void *data_char_pointer;
+        char *data_char_pointer;
     };
 };
 
