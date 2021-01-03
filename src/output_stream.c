@@ -18,6 +18,41 @@ struct output_stream void_output_stream_create() {
     };
 }
 
+struct string_output_stream_data {
+    char *string;
+    bool limited;
+    size_t limit;
+    size_t used;
+};
+
+void string_output_stream_put(void *data, char c) {
+    struct string_output_stream_data *string_output_stream_data = (struct string_output_stream_data *) data;
+    if (!string_output_stream_data->limited || string_output_stream_data->used < string_output_stream_data->limit) {
+        string_output_stream_data->string[string_output_stream_data->used] = c;
+        string_output_stream_data->used++;
+    }
+}
+
+void string_output_stream_destroy(void *data) {
+    string_output_stream_put(data, '\0');
+    free(data);
+}
+
+struct output_stream string_output_stream_create(char *string, bool limited, size_t limit) {
+    struct string_output_stream_data *string_output_stream_data = malloc(sizeof(struct string_output_stream_data));
+    *string_output_stream_data = (struct string_output_stream_data) {
+        .string = string,
+        .limited = limited,
+        .limit = limit,
+        .used = 0,
+    };
+    return (struct output_stream) {
+        .put = &string_output_stream_put,
+        .destroy = &string_output_stream_destroy,
+        .data = (void *) string_output_stream_data,
+    };
+}
+
 struct file_output_stream_data {
     int fd;
 };

@@ -20,6 +20,15 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
         ARGUMENT_TYPE_FP,
         ARGUMENT_TYPE_VOID_POINTER,
         ARGUMENT_TYPE_CHAR_POINTER,
+        ARGUMENT_TYPE_SIGNED_CHAR_POINTER,
+        ARGUMENT_TYPE_SHORT_POINTER,
+        ARGUMENT_TYPE_INT_POINTER,
+        ARGUMENT_TYPE_LONG_POINTER,
+        ARGUMENT_TYPE_LONG_LONG_POINTER,
+        ARGUMENT_TYPE_INTMAX_T_POINTER,
+        ARGUMENT_TYPE_SIZE_T_POINTER,
+        ARGUMENT_TYPE_PTRDIFF_T_POINTER,
+        ARGUMENT_TYPE_AP_POINTER,
     };
     union argument {
         int argument_int;
@@ -38,6 +47,15 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
         struct fp argument_fp;
         void *argument_void_pointer;
         char *argument_char_pointer;
+        signed char *argument_signed_char_pointer;
+        short *argument_short_pointer;
+        int *argument_int_pointer;
+        long *argument_long_pointer;
+        long long *argument_long_long_pointer;
+        intmax_t *argument_intmax_t_pointer;
+        size_t *argument_size_t_pointer;
+        ptrdiff_t *argument_ptrdiff_t_pointer;
+        struct ap *argument_ap_pointer;
     };
     struct parsed_format parsed_format = parse(format);
     size_t arguments_count = 0;
@@ -128,6 +146,27 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
             case CONVERSION_SPECIFIER_p:
                 data_argument_type = ARGUMENT_TYPE_VOID_POINTER;
                 break;
+            case CONVERSION_SPECIFIER_n:
+                if (length_modifier == LENGTH_MODIFIER_hh) {
+                    data_argument_type = ARGUMENT_TYPE_SIGNED_CHAR_POINTER;
+                } else if (length_modifier == LENGTH_MODIFIER_h) {
+                    data_argument_type = ARGUMENT_TYPE_SHORT_POINTER;
+                } else if (length_modifier == LENGTH_MODIFIER_l) {
+                    data_argument_type = ARGUMENT_TYPE_LONG_POINTER;
+                } else if (length_modifier == LENGTH_MODIFIER_ll) {
+                    data_argument_type = ARGUMENT_TYPE_LONG_LONG_POINTER;
+                } else if (length_modifier == LENGTH_MODIFIER_j) {
+                    data_argument_type = ARGUMENT_TYPE_INTMAX_T_POINTER;
+                } else if (length_modifier == LENGTH_MODIFIER_z) {
+                    data_argument_type = ARGUMENT_TYPE_SIZE_T_POINTER;
+                } else if (length_modifier == LENGTH_MODIFIER_t) {
+                    data_argument_type = ARGUMENT_TYPE_PTRDIFF_T_POINTER;
+                } else if (length_modifier == LENGTH_MODIFIER_Z) {
+                    data_argument_type = ARGUMENT_TYPE_AP_POINTER;
+                } else {
+                    data_argument_type = ARGUMENT_TYPE_INT_POINTER;
+                }
+                break;
         }
         argument_types[parsed_format.conversion_specifications[i].data_argument_index] = data_argument_type;
     }
@@ -181,6 +220,33 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
                 break;
             case ARGUMENT_TYPE_CHAR_POINTER:
                 arguments[i].argument_char_pointer = va_arg(va_list, char *);
+                break;
+            case ARGUMENT_TYPE_SIGNED_CHAR_POINTER:
+                arguments[i].argument_signed_char_pointer = va_arg(va_list, signed char *);
+                break;
+            case ARGUMENT_TYPE_SHORT_POINTER:
+                arguments[i].argument_short_pointer = va_arg(va_list, short *);
+                break;
+            case ARGUMENT_TYPE_INT_POINTER:
+                arguments[i].argument_int_pointer = va_arg(va_list, int *);
+                break;
+            case ARGUMENT_TYPE_LONG_POINTER:
+                arguments[i].argument_long_pointer = va_arg(va_list, long *);
+                break;
+            case ARGUMENT_TYPE_LONG_LONG_POINTER:
+                arguments[i].argument_long_long_pointer = va_arg(va_list, long long *);
+                break;
+            case ARGUMENT_TYPE_INTMAX_T_POINTER:
+                arguments[i].argument_intmax_t_pointer = va_arg(va_list, intmax_t *);
+                break;
+            case ARGUMENT_TYPE_SIZE_T_POINTER:
+                arguments[i].argument_size_t_pointer = va_arg(va_list, size_t *);
+                break;
+            case ARGUMENT_TYPE_PTRDIFF_T_POINTER:
+                arguments[i].argument_ptrdiff_t_pointer = va_arg(va_list, ptrdiff_t *);
+                break;
+            case ARGUMENT_TYPE_AP_POINTER:
+                arguments[i].argument_ap_pointer = va_arg(va_list, struct ap *);
                 break;
         }
     }
@@ -280,8 +346,29 @@ struct parsed_format load_varargs(const char *format, va_list va_list) {
             case CONVERSION_SPECIFIER_p:
                 parsed_format.conversion_specifications[i].data_void_pointer = argument.argument_void_pointer;
                 break;
+            case CONVERSION_SPECIFIER_n:
+                if (length_modifier == LENGTH_MODIFIER_hh) {
+                    parsed_format.conversion_specifications[i].data_signed_char_pointer = argument.argument_signed_char_pointer;
+                } else if (length_modifier == LENGTH_MODIFIER_h) {
+                    parsed_format.conversion_specifications[i].data_short_pointer = argument.argument_short_pointer;
+                } else if (length_modifier == LENGTH_MODIFIER_l) {
+                    parsed_format.conversion_specifications[i].data_long_pointer = argument.argument_long_pointer;
+                } else if (length_modifier == LENGTH_MODIFIER_ll) {
+                    parsed_format.conversion_specifications[i].data_long_long_pointer = argument.argument_long_long_pointer;
+                } else if (length_modifier == LENGTH_MODIFIER_j) {
+                    parsed_format.conversion_specifications[i].data_intmax_t_pointer = argument.argument_intmax_t_pointer;
+                } else if (length_modifier == LENGTH_MODIFIER_z) {
+                    parsed_format.conversion_specifications[i].data_size_t_pointer = argument.argument_size_t_pointer;
+                } else if (length_modifier == LENGTH_MODIFIER_t) {
+                    parsed_format.conversion_specifications[i].data_ptrdiff_t_pointer = argument.argument_ptrdiff_t_pointer;
+                } else if (length_modifier == LENGTH_MODIFIER_Z) {
+                    parsed_format.conversion_specifications[i].data_ap_pointer = argument.argument_ap_pointer;
+                } else {
+                    parsed_format.conversion_specifications[i].data_int_pointer = argument.argument_int_pointer;
+                }
+                break;
         }
-        if (length_modifier != LENGTH_MODIFIER_Z && length_modifier != LENGTH_MODIFIER_F) {
+        if (length_modifier != LENGTH_MODIFIER_Z && length_modifier != LENGTH_MODIFIER_F && parsed_format.conversion_specifications[i].conversion_specifier != CONVERSION_SPECIFIER_n) {
             parsed_format.conversion_specifications[i].length_modifier = LENGTH_MODIFIER_none;
         }
         parsed_format.conversion_specifications[i].data_argument_index = (size_t) -1;

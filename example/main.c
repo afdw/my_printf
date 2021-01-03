@@ -35,10 +35,44 @@ void example_hexadecimal_float() {
     my_printf("%a\n", -1.0 / 0.0);
 }
 
+void example_numbers_cache() {
+    char numbers_cache[1024];
+    size_t numbers_positions[11];
+    my_snprintf(
+        numbers_cache,
+        1024,
+        "%1$zn%12$02d%2$zn%13$02d%3$zn%14$02d%4$zn%15$02d%5$zn%16$02d%6$zn%17$02d%7$zn%18$02d%8$zn%19$02d%9$zn%20$02d%10$zn%21$02d%11$zn%22$02d",
+        &numbers_positions[0],
+        &numbers_positions[1],
+        &numbers_positions[2],
+        &numbers_positions[3],
+        &numbers_positions[4],
+        &numbers_positions[5],
+        &numbers_positions[6],
+        &numbers_positions[7],
+        &numbers_positions[8],
+        &numbers_positions[9],
+        &numbers_positions[10],
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+    );
+    my_printf("%.2s + %.2s = %.2s\n", &numbers_cache[numbers_positions[3]], &numbers_cache[numbers_positions[7]], &numbers_cache[numbers_positions[10]]);
+}
+
 int main(int argc, char *argv[]) {
     example_basic_numbers();
     example_factorial();
     example_huge_precision();
     example_hexadecimal_float();
+    example_numbers_cache();
     return 0;
 }

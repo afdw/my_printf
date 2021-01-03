@@ -47,6 +47,7 @@ enum conversion_specifier {
     CONVERSION_SPECIFIER_c,
     CONVERSION_SPECIFIER_s,
     CONVERSION_SPECIFIER_p,
+    CONVERSION_SPECIFIER_n,
 };
 
 struct conversion_specification {
@@ -67,6 +68,15 @@ struct conversion_specification {
         struct fp data_fp;
         void *data_void_pointer;
         char *data_char_pointer;
+        signed char *data_signed_char_pointer;
+        short *data_short_pointer;
+        int *data_int_pointer;
+        long *data_long_pointer;
+        long long *data_long_long_pointer;
+        intmax_t *data_intmax_t_pointer;
+        size_t *data_size_t_pointer;
+        ptrdiff_t *data_ptrdiff_t_pointer;
+        struct ap *data_ap_pointer;
     };
 };
 

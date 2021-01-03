@@ -82,7 +82,7 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
                     conversion_specification.conversion_specification_flags.plus = true;
                 }
             }
-            if (format[i] >= '0' && format[i] <= '9') {
+            if (format[i] >= '0' && format[i] <= '9' || format[i] == '*') {
                 parse_literal_or_field_supplied(format, &i, &current_sequential_argument_index, &conversion_specification.field_width_argument_index, &conversion_specification.field_width);
             }
             if (format[i] == '.') {
@@ -152,6 +152,7 @@ static size_t parse_internal(const char *format, struct parsed_format parsed_for
             MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER(c)
             MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER(s)
             MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER(p)
+            MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER(n)
 #undef MY_PRINTF_PARSING_C_PARSE_CONVERSION_SPECIFIER
             if (format[i] == '%') {
                 conversion_specification.conversion_specifier = CONVERSION_SPECIFIER_literal;

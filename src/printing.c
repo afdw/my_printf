@@ -526,7 +526,7 @@ static size_t print_exponential_hexadecimal_conversion_specification(struct outp
     return printed;
 }
 
-static size_t print_conversion_specification(struct output_stream output_stream, struct conversion_specification conversion_specification) {
+static size_t print_conversion_specification(struct output_stream output_stream, struct conversion_specification conversion_specification, size_t printed_so_far) {
     switch (conversion_specification.conversion_specifier) {
         case CONVERSION_SPECIFIER_literal:
             return print_char(output_stream, conversion_specification.data_char);
@@ -873,13 +873,34 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                     ap_from_uintmax_t((uintmax_t) conversion_specification.data_void_pointer)
                 );
             }
+        case CONVERSION_SPECIFIER_n:
+            if (conversion_specification.length_modifier == LENGTH_MODIFIER_hh) {
+                *conversion_specification.data_signed_char_pointer = printed_so_far;
+            } else if (conversion_specification.length_modifier == LENGTH_MODIFIER_h) {
+                *conversion_specification.data_short_pointer = printed_so_far;
+            } else if (conversion_specification.length_modifier == LENGTH_MODIFIER_l) {
+                *conversion_specification.data_long_pointer = printed_so_far;
+            } else if (conversion_specification.length_modifier == LENGTH_MODIFIER_ll) {
+                *conversion_specification.data_long_long_pointer = printed_so_far;
+            } else if (conversion_specification.length_modifier == LENGTH_MODIFIER_j) {
+                *conversion_specification.data_intmax_t_pointer = printed_so_far;
+            } else if (conversion_specification.length_modifier == LENGTH_MODIFIER_z) {
+                *conversion_specification.data_size_t_pointer = printed_so_far;
+            } else if (conversion_specification.length_modifier == LENGTH_MODIFIER_t) {
+                *conversion_specification.data_ptrdiff_t_pointer = printed_so_far;
+            } else if (conversion_specification.length_modifier == LENGTH_MODIFIER_Z) {
+                *conversion_specification.data_ap_pointer = ap_from_uintmax_t(printed_so_far);
+            } else {
+                *conversion_specification.data_int_pointer = printed_so_far;
+            }
+            return 0;
     }
 }
 
 size_t print_parsed_format(struct output_stream output_stream, struct parsed_format parsed_format) {
     size_t printed = 0;
     for (size_t i = 0; i < parsed_format.length; i++) {
-        printed += print_conversion_specification(output_stream, parsed_format.conversion_specifications[i]);
+        printed += print_conversion_specification(output_stream, parsed_format.conversion_specifications[i], printed);
     }
     return printed;
 }
