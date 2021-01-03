@@ -813,8 +813,17 @@ static size_t print_conversion_specification(struct output_stream output_stream,
                     fp_from_long_double_result.nan
                 );
             }
-        case CONVERSION_SPECIFIER_c:
-            break;
+        case CONVERSION_SPECIFIER_c: {
+            size_t printed = 0;
+            if (!conversion_specification.conversion_specification_flags.minus && conversion_specification.field_width > 1) {
+                printed += print_repeated_char(output_stream, conversion_specification.field_width - 1, ' ');
+            }
+            printed += print_char(output_stream, conversion_specification.data_char);
+            if (conversion_specification.conversion_specification_flags.minus && conversion_specification.field_width > 1) {
+                printed += print_repeated_char(output_stream, conversion_specification.field_width - 1, ' ');
+            }
+            return printed;
+        }
         case CONVERSION_SPECIFIER_s:
             break;
         case CONVERSION_SPECIFIER_p:
