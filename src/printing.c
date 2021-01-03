@@ -850,7 +850,29 @@ static size_t print_conversion_specification(struct output_stream output_stream,
             return printed;
         }
         case CONVERSION_SPECIFIER_p:
-            break;
+            if (conversion_specification.data_void_pointer == NULL) {
+                size_t printed = 0;
+                if (!conversion_specification.conversion_specification_flags.minus && 5 < conversion_specification.field_width) {
+                    printed += print_repeated_char(output_stream, conversion_specification.field_width - 5, ' ');
+                }
+                printed += print_string(output_stream, "(nil)");
+                if (conversion_specification.conversion_specification_flags.minus && 5 < conversion_specification.field_width) {
+                    printed += print_repeated_char(output_stream, conversion_specification.field_width - 5, ' ');
+                }
+                return printed;
+            } else {
+                struct conversion_specification_flags conversion_specification_flags = conversion_specification.conversion_specification_flags;
+                conversion_specification_flags.hash = true;
+                return print_integer_conversion_specification(
+                    output_stream,
+                    false,
+                    16,
+                    conversion_specification_flags,
+                    conversion_specification.field_width,
+                    conversion_specification.precision,
+                    ap_from_uintmax_t((uintmax_t) conversion_specification.data_void_pointer)
+                );
+            }
     }
 }
 
